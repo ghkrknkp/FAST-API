@@ -1,0 +1,118 @@
+groups:
+  - name: fastapi_api_alerts
+    rules:
+      # -------------------------------------------------------------
+      # Alert A: API Down (Availability)
+      # -------------------------------------------------------------
+      - alert: APIDown
+        expr: up{job="fastapi"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "FastAPI service is unreachable"
+          description: "Prometheus failed to scrape FastAPI at fastapi:8000 for more than 15 seconds."
+          remediation: "Check Docker container status (docker compose ps) and inspect application container logs."
+
+      # -------------------------------------------------------------
+      # Alert B: Slow API Response (Latency > 3s)
+      # -------------------------------------------------------------
+      - alert: SlowAPIResponse
+        expr: |
+          (
+            sum(rate(fastapi_slow_requests_total[1m])) > 0
+          )
+          or
+          (
+            histogram_quantile(0.95, sum(rate(fastapi_request_duration_seconds_bucket[1m])) by (le)) > 3.0
+          )
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "API response duration exceeded 3.0 seconds SLA"
+          description: "Observed requests with latency breaching the 3-second threshold on endpoint {{ $labels.endpoint }}."
+          remediation: "Check /simulate-timeout usage or investigate downstream database / network bottlenecks."
+
+      # -------------------------------------------------------------
+      # Alert C: HTTP 500 Internal Server Error
+      # -------------------------------------------------------------
+      - alert: HTTP500Error
+        expr: sum(rate(fastapi_requests_total{status_code="500"}[1m])) > 0
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 500 Internal Server Error detected"
+          description: "Internal server error rate is {{ $value | printf \"%.2f\" }} req/s."
+          remediation: "Inspect application structured JSON logs for unhandled exceptions or check /simulate-error calls."
+
+      # -------------------------------------------------------------
+      # Alert D: High Failure Rate (> 5% of all traffic)
+      # -------------------------------------------------------------
+      - alert: HighFailureRate
+        expr: |
+          (
+            sum(rate(fastapi_requests_total{status_code=~"[45].."}[1m]))
+            /
+            (sum(rate(fastapi_requests_total[1m])) > 0)
+          ) * 100 > 5
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request failure percentage (> 5%)"
+          description: "Over 5% of HTTP requests returned 4xx/5xx status codes over the last 1 minute (current: {{ $value | printf \"%.1f\" }}%)."
+          remediation: "Correlate status code breakdown in Grafana between client errors (4xx) and server errors (5xx)."
+
+      # -------------------------------------------------------------
+      # Alert E: Service Health Failure
+      # -------------------------------------------------------------
+      - alert: ServiceHealthFailure
+        expr: fastapi_app_health_status == 0
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application health check reports unhealthy"
+          description: "The /health endpoint returned a degraded or unhealthy state (fastapi_app_health_status == 0)."
+          remediation: "Check application readiness probes and dependencies, or verify if toggle_health_state was activated."
+
+      # -------------------------------------------------------------
+      # Additional Alert: Authentication Failure Spike
+      # -------------------------------------------------------------
+      - alert: AuthenticationFailureSpike
+        expr: sum(rate(fastapi_auth_failures_total[1m])) > 0.1
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in rejected authentication attempts (HTTP 401)"
+          description: "Authentication failures observed at {{ $value | printf \"%.2f\" }} failures/s on {{ $labels.endpoint }}."
+          remediation: "Inspect client credentials and check for unauthorized access attempts or credential rotation issues."
+
+      # -------------------------------------------------------------
+      # Additional Alert: Rate Limit Exceeded (HTTP 429)
+      # -------------------------------------------------------------
+      - alert: RateLimitExceeded
+        expr: sum(rate(fastapi_rate_limit_exceeded_total[1m])) > 0.1
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limit quotas exceeded (HTTP 429)"
+          description: "Requests rejected by rate limiting at rate {{ $value | printf \"%.2f\" }} req/s."
+          remediation: "Review client traffic volume and consider quota adjustments if traffic is legitimate."
+
+      # -------------------------------------------------------------
+      # Additional Alert: High CPU Usage (> 85%)
+      # -------------------------------------------------------------
+      - alert: HighCPUUsage
+        expr: fastapi_process_cpu_percent > 85
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High process CPU utilization (> 85%)"
+          description: "FastAPI process CPU consumption reached {{ $value | printf \"%.1f\" }}%."
+          remediation: "Scale worker instances or profile computationally heavy requests."
