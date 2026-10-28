@@ -1,6 +1,12 @@
 # FastAPI API Monitoring Dashboard
 
-A production-grade, end-to-end API Observability and Monitoring stack built with **FastAPI**, **Prometheus**, **Grafana**, and **Alertmanager** orchestrated via **Docker Compose**.
+A production-grade, end-to-end API Observability and Monitoring stack built with **FastAPI**, **Prometheus**, and **Alertmanager**.
+
+[![Loom Video Walkthrough](https://img.shields.io/badge/Loom_Demo_Video-Watch_Walkthrough-blue?style=for-the-badge&logo=loom)](https://www.loom.com/share/84959d2b553649eba5a9f97f7b4907fa)
+
+> 🎥 **Video Walkthrough Demonstration:**  
+> Watch the complete 5-minute video demonstration covering server setup, web dashboard, failure simulations, Slack notifications, and Gmail SMTP alerts:  
+> **Link:** [https://www.loom.com/share/84959d2b553649eba5a9f97f7b4907fa](https://www.loom.com/share/84959d2b553649eba5a9f97f7b4907fa)
 
 Designed to track real-time API health, monitor latency (SLA > 3.0s), analyze HTTP status distributions, detect anomalies, trigger actionable alerts, and provide systematic root-cause analysis (RCA).
 
